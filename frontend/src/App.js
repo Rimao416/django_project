@@ -4,34 +4,27 @@ import axios from "axios";
 import React, { useState, useEffect } from "react";
 import "./App.css";
 function App() {
-  const [packetInfo, setPacketInfo] = useState([]);
-  console.log(window.location.host)
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
-    // const socket = new WebSocket('ws://' + window.location.host + '/ws/packet_info/');;
-    const socket = new WebSocket('ws://' + 'localhost:8000' + '/ws/packet_info/');
-
-    socket.onmessage = function (event) {
-      const receivedPacketInfo = JSON.parse(event.data)['packet_info'];
-      setPacketInfo(prevPacketInfo => [...prevPacketInfo, receivedPacketInfo]);
-    };
-
-    return () => {
-      socket.close();
-    };
+    axios
+      // .get("http://127.0.0.1:8000/api/bonjour/")
+      .get("http://127.0.0.1:8000/api/capture_packets/")
+      .then((response) => {
+        console.log("Chargement")
+        // Traite la réponse comme nécessaire
+        console.log(response);
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+      });
   }, []);
 
   return (
-    <div>
-      <h1>Packet Information</h1>
-      <ul>
-        {packetInfo.map((info, index) => (
-          <li key={index}>{info}</li>
-        ))}
-      </ul>
+    <div className="App">
+      <p>Bonjour je suis l'application React</p>
     </div>
   );
-};
-
+}
 
 export default App;

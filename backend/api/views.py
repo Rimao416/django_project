@@ -10,26 +10,12 @@ def bonjour(request):
     return JsonResponse({'message': 'Bonjour'})
 
 
-import asyncio
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.shortcuts import render
-from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
-from scapy.all import sniff, IP
-from collections import Counter
-
-def bonjour(request):
-    return JsonResponse({'message': 'Bonjour'})
-
-@csrf_exempt
+@csrf_exempt  # Ignorer la protection CSRF pour cette démo (à utiliser avec prudence en production)
 def capture_packets(request):
     ip_counter = Counter()
     protocol_counter = Counter()
 
     def packet_callback(packet):
-        nonlocal ip_counter, protocol_counter
-
         if IP in packet:
             src_ip = packet[IP].src
             dst_ip = packet[IP].dst
@@ -42,22 +28,28 @@ def capture_packets(request):
             elif protocol == 17:
                 protocol_counter.update(['UDP'])
 
-            # Envoyer les informations du paquet via WebSocket
-            channel_layer = get_channel_layer()
-            async_to_sync(channel_layer.group_send)(
-                'packet_group',
-                {
-                    'type': 'send.packet_info',
-                    'packet_info': f"IP Source: {src_ip}, IP Destination: {dst_ip}, Protocol: {protocol}",
-                }
-            )
+            print(f"IP Source: {src_ip}, IP Destination: {dst_ip}, Protocol: {protocol}")
+            # response_data = {
+            #     'ip_stats': src_ip,
+            #     'protocol_stats': protocol
+            # } 
+            # return JsonResponse({'message': 'Bonjour'})
+            # return JsonResponse(response_data)
 
     # Capturer les paquets pendant une courte période
-    asyncio.create_task(sniff_async(packet_callback))
+    sniff(prn=packet_callback, store=0,timeout=3)
+    # return JsonResponse(response_data)
 
-    # Retourner une réponse JSON (tu peux ajuster cela en fonction de tes besoins)
-    return JsonResponse({'message': 'Capture en cours'})
+    # Créer un dictionnaire avec les adresses IP les plus fréquemment contactées
+    ip_stats = {ip: count for ip, count in ip_counter.most_common(5)}
 
-async def sniff_async(callback):
-    # Capturer les paquets pendant une courte période
-    sniff(prn=callback, store=0)
+    # Créer un dictionnaire avec les types de protocoles utilisés
+    protocol_stats = {protocol: count for protocol, count in protocol_counter.items()}
+
+    # Retourner les statistiques sous forme de réponse JSON
+    response_data = {
+        'ip_stats': ip_stats,
+        'protocol_stats': protocol_stats
+    }
+
+    return JsonResponse(response_data)
