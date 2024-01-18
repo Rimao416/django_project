@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from scapy.all import sniff, IP
 from collections import Counter
+from .models import IPAddress
 def bonjour(request):
     return JsonResponse({'message': 'Bonjour'})
 
@@ -16,6 +17,7 @@ def capture_packets(request):
     protocol_counter = Counter()
 
     def packet_callback(packet):
+        
         if IP in packet:
             src_ip = packet[IP].src
             dst_ip = packet[IP].dst
@@ -28,7 +30,14 @@ def capture_packets(request):
             elif protocol == 17:
                 protocol_counter.update(['UDP'])
 
+            IPAddress.objects.create(
+                source_ip=src_ip,
+                destination_ip=dst_ip,
+                protocol=protocol
+            )
             print(f"IP Source: {src_ip}, IP Destination: {dst_ip}, Protocol: {protocol}")
+
+            
             # response_data = {
             #     'ip_stats': src_ip,
             #     'protocol_stats': protocol
@@ -37,7 +46,7 @@ def capture_packets(request):
             # return JsonResponse(response_data)
 
     # Capturer les paquets pendant une courte période
-    sniff(prn=packet_callback, store=0,timeout=3)
+    sniff(prn=packet_callback, store=0)
     # return JsonResponse(response_data)
 
     # Créer un dictionnaire avec les adresses IP les plus fréquemment contactées
